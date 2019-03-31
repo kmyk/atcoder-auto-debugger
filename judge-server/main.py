@@ -24,9 +24,9 @@ def docker_exec(command, image=config.DOCKER_IMAGE, readonly=True, directory=Non
     else:
         bind = directory
     if readonly:
-        mode = 'rw'
-    else:
         mode = 'ro'
+    else:
+        mode = 'rw'
     working_dir = '/mnt/workspace'
     volumes = { bind: { 'bind': working_dir, 'mode': mode } }
     ulimits = []
@@ -79,7 +79,7 @@ def run_compiler(compiler, options, code):
     with tempfile.TemporaryDirectory() as tempdir:
         with open(pathlib.Path(tempdir) / 'main.cpp', 'w') as fh:
             fh.write(code)
-        exit_code, (stdout, stderr) = docker_exec([compiler] + options, directory=tempdir, readonly=False, timeout=10.0)
+        exit_code, (stdout, stderr) = docker_exec([compiler] + options + ['main.cpp'], directory=tempdir, readonly=False, timeout=10.0)
         if (pathlib.Path(tempdir) / 'a.out').exists():
             with open(pathlib.Path(tempdir) / 'a.out', 'rb') as fh:
                 binary = fh.read()
@@ -91,10 +91,11 @@ def run_sample_test(binary, sample_input):
     with tempfile.TemporaryDirectory() as tempdir:
         with open(pathlib.Path(tempdir) / 'a.out', 'wb') as fh:
             fh.write(binary)
+        (pathlib.Path(tempdir) / 'a.out').chmod(0o755)
         with open(pathlib.Path(tempdir) / 'sample.in', 'w') as fh:
             fh.write(sample_input)
         exit_code, (stdout, stderr) = docker_exec(['sh', '-c', 'valgrind ./a.out < sample.in'], directory=tempdir, timeout=3.0)
-    return exit_code, stdout, (stderr or b'')
+    return exit_code, (stdout or b''), (stderr or b'')
 
 def serve_request(request_id, db):
     cur = db.cursor()
@@ -137,7 +138,7 @@ def serve_request(request_id, db):
             result['sample_results'] = []
             for i, (sample_input, sample_output) in enumerate(samples):
                 logging.info('run sample %s', i + 1)
-                exit_code, stdout, stderr = run_sample_test(gcc_bin, sample_input)
+                exit_code, stdout, stderr = run_sample_test(binary, sample_input)
                 result['sample_results'] += [{
                     'exit_code': exit_code,
                     'stdout': stdout.decode(),
@@ -152,6 +153,7 @@ def serve_request(request_id, db):
     }
     cur.execute('INSERT INTO results (id, data) VALUES (%s, %s)', (request_id, json.dumps(data)))
     cur.execute('DELETE FROM jobs WHERE id = %s', (request_id, ))
+    logging.info('done')
 
 def main():
     logging.basicConfig(level=logging.INFO)

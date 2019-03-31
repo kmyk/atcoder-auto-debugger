@@ -1,4 +1,6 @@
 # Python Version: 3.x
+import json
+
 import config
 
 import flask
@@ -79,7 +81,7 @@ def post_analyze():
         cur.execute('SELECT LAST_INSERT_ID()')
         problem_id, = cur.fetchone()
         for i, sample in enumerate(samples):
-            cur.execute('INSERT INTO samples (problem_id, serial, input, output) VALUES (%s, %s, %s, %s)', (problem_id, i + 1, problem.get_url(), name))
+            cur.execute('INSERT INTO samples (problem_id, serial, input, output) VALUES (%s, %s, %s, %s)', (problem_id, i + 1, sample.input_data, sample.output_data or b''))
         db.commit()
 
     # get submission_id 
@@ -113,7 +115,7 @@ def post_analyze():
 
 @app.route("/result/<int:request_id>")
 def get_result(request_id: int):
-    cur = get_db().cursor()
+    cur = get_db().cursor(dictionary=True)
     cur.execute('''
         SELECT results.data, problems.name, submissions.user, submissions.status, submissions.url, submissions.code, submissions.language, results.created_at
             FROM results
@@ -122,24 +124,23 @@ def get_result(request_id: int):
             INNER JOIN problems ON submissions.problem_id = problems.id
         WHERE results.id = %s
     ''', (request_id, ))
-    data = cur.fetchone()
+    row = cur.fetchone()
 
-    if data is None:
+    if row is None:
         cur.execute('SELECT 1 FROM jobs WHERE id = %s', (request_id, ))
         if cur.fetchone() is not None:
             return flask.abort(flask.make_response(flask.jsonify(message="Please wait...", id=request_id), 400))
         else:
             return flask.abort(flask.make_response(flask.jsonify(message="There is no such request."), 400))
     else:
-        return flask.jsonify(
-            data=data['data']
-        )
+        row['data'] = json.loads(row['data'])
+        return flask.jsonify(row)
 
 @app.route("/queue")
 def get_queue():
-    cur = get_db().cursor()
+    cur = get_db().cursor(dictionary=True)
     cur.execute('''
-        SELECT requests.id, problems.name, submissions.user, submissions.status, requests.created_at, jobs.assigned
+        SELECT requests.id, problems.name, submissions.user, submissions.status, requests.created_at, jobs.assigned_to
             FROM jobs
             INNER JOIN requests ON jobs.id = requests.id
             INNER JOIN submissions ON requests.submission_id = submissions.id
@@ -149,7 +150,7 @@ def get_queue():
 
 @app.route("/recent")
 def get_results():
-    cur = get_db().cursor()
+    cur = get_db().cursor(dictionary=True)
     cur.execute('''
         SELECT requests.id, problems.name, submissions.user, submissions.status, results.created_at
             FROM results
