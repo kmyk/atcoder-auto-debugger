@@ -4,11 +4,13 @@ import json
 import config
 
 import flask
+import flask_cors
 import mysql.connector
 import onlinejudge
 
 
 app = flask.Flask(__name__)
+flask_cors.CORS(app)
 
 
 def get_db():
