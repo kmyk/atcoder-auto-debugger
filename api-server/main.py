@@ -84,7 +84,7 @@ def post_analyze():
 
     # get submission_id 
     url = submission.get_url()
-    cur.execute('SELECT id FROM submissions WHERE url = %s', (problem.get_url(), ))
+    cur.execute('SELECT id FROM submissions WHERE url = %s', (submission.get_url(), ))
     row = cur.fetchone()
     if row is not None:
         submission_id, = row
@@ -92,18 +92,21 @@ def post_analyze():
         code = submission.download_code()
         user = submission.get_user_id()
         status = submission.get_status()
+        language = submission.get_language_name()
+        if 'C++' not in language:
+            flask.abort(flask.make_response(flask.jsonify(message="The language must be a C++. / C++ での提出を指定してね", id=request_id), 400))
         if status not in ('WA', 'RE', 'TLE'):
             flask.abort(flask.make_response(flask.jsonify(message="The status of your submission must be WA, RE, or TLE. / WA か RE か TLE の提出を指定してね", id=request_id), 400))
-        cur.execute('INSERT INTO submissions (problem_id, url, user, code, status) VALUES (%s, %s, %s, %s, %s)', (problem_id, submission.get_url(), user, code, status))
+        cur.execute('INSERT INTO submissions (problem_id, url, user, code, language, status) VALUES (%s, %s, %s, %s, %s, %s)', (problem_id, submission.get_url(), user, code, language, status))
         cur.execute('SELECT LAST_INSERT_ID()')
-        submission_id ,= cur.fetchone()
+        submission_id, = cur.fetchone()
 
     # create a request
     db.start_transaction()
     cur.execute('INSERT INTO requests (submission_id) VALUES (%s)', (submission_id, ))
     cur.execute('SELECT LAST_INSERT_ID()')
     request_id, = cur.fetchone()
-    cur.execute('INSERT INTO jobs (id, ip_address, assigned) VALUES (%s, INET6_ATON(%s), false)', (submission_id, flask.request.remote_addr))
+    cur.execute('INSERT INTO jobs (id, ip_address) VALUES (%s, INET6_ATON(%s))', (request_id, flask.request.remote_addr))
     db.commit()
 
     return flask.jsonify(message='OK', id=request_id)
@@ -112,7 +115,7 @@ def post_analyze():
 def get_result(request_id: int):
     cur = get_db().cursor()
     cur.execute('''
-        SELECT results.data, problems.name, submissions.user, submissions.status, submissions.url, submissions.code, results.created_at
+        SELECT results.data, problems.name, submissions.user, submissions.status, submissions.url, submissions.code, submissions.language, results.created_at
             FROM results
             INNER JOIN requests ON results.id = requests.id
             INNER JOIN submissions ON requests.submission_id = submissions.id

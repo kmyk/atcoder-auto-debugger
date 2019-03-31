@@ -6,7 +6,7 @@ CREATE TABLE `problems` (
     `url` varchar(255) NOT NULL UNIQUE,
     `name` varchar(255) NOT NULL,
     PRIMARY KEY (`id`)
-) DEFAULT CHARSET=utf8mb4;
+) DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=10000;  -- NOTE: AUTO_INCREMENT starting with a random value helps debugging
 
 DROP TABLE IF EXISTS `samples`;
 CREATE TABLE `samples` (
@@ -25,11 +25,12 @@ CREATE TABLE `submissions` (
     `url` varchar(255) NOT NULL UNIQUE,
     `user` varchar(255) NOT NULL,
     `code` blob NOT NULL,
+    `language` varchar(255) NOT NULL,
     `status` varchar(255) NOT NULL,
     PRIMARY KEY (`id`),
     FOREIGN KEY (`problem_id`) REFERENCES `problems` (`id`),
     KEY `idx_url` (`url`)
-) DEFAULT CHARSET=utf8mb4;
+) DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=20000;
 
 DROP TABLE IF EXISTS `requests`;
 CREATE TABLE `requests` (
@@ -44,7 +45,8 @@ DROP TABLE IF EXISTS `jobs`;
 CREATE TABLE `jobs` (
     `id` bigint NOT NULL,
     `ip_address` varbinary(16) NOT NULL UNIQUE,  -- NOTE: for rate restriction based on IP addresses
-    `assigned` boolean NOT NULL,
+    `assigned_to` varchar(255) NULL DEFAULT NULL,  -- NOTE: use NULL
+    `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     FOREIGN KEY (`id`) REFERENCES `requests` (`id`)
 ) DEFAULT CHARSET=utf8mb4;
