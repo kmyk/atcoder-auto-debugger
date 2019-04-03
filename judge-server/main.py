@@ -3,6 +3,7 @@ import json
 import logging
 import pathlib
 import queue
+import re
 import sys
 import tempfile
 import threading
@@ -52,9 +53,9 @@ def undertake_request(db):
     try:
         db.start_transaction()
         cur.execute('''
-            SELECT requests.id
+            SELECT request_id
                 FROM jobs
-                INNER JOIN requests ON jobs.id = requests.id
+                INNER JOIN requests USING (request_id)
             WHERE jobs.assigned_to IS NULL
             ORDER BY requests.created_at
             FOR UPDATE
@@ -64,7 +65,7 @@ def undertake_request(db):
             request_id = None
         else:
             request_id, = row
-            cur.execute('UPDATE jobs SET assigned_to = %s WHERE id = %s', (config.SERVER_NAME, request_id, ))
+            cur.execute('UPDATE jobs SET assigned_to = %s WHERE request_id = %s', (config.SERVER_NAME, request_id, ))
         db.commit()
     except mysql.connector.Error:
         traceback.print_exc()
@@ -102,23 +103,26 @@ def serve_request(request_id, db):
 
     # retrieve the data
     cur.execute('''
-        SELECT problems.id, submissions.code
+        SELECT problem_id, submissions.code
             FROM requests
-            INNER JOIN submissions ON requests.submission_id = submissions.id
-            INNER JOIN problems ON submissions.problem_id = problems.id
-        WHERE requests.id = %s
+            INNER JOIN submissions USING (submission_id)
+            INNER JOIN problems USING (problem_id)
+        WHERE request_id = %s
     ''', (request_id, ))
     problem_id, code = cur.fetchone()
     cur.execute('SELECT input, output FROM samples WHERE problem_id = %s ORDER BY serial', (problem_id, ))
     samples = cur.fetchall()
 
+    # table
+    compilers = ['g++', 'clang++']
+    option_types = {
+        'debug': ['-std=c++14', '-Wall', '-g3', '-fsanitize=undefined', '-D_GLIBCXX_DEBUG'],
+        'optimized': ['-std=c++14', '-Wall', '-O3'],
+    }
+
     # debug
     results = {}
-    for compiler in ('g++', 'clang++'):
-        option_types = {
-            'debug': ['-std=c++14', '-Wall', '-g3', '-fsanitize=undefined', '-D_GLIBCXX_DEBUG'],
-            'optimized': ['-std=c++14', '-Wall', '-O3'],
-        }
+    for compiler in compilers:
         for option_type, options in option_types.items():
             result = {}
             results['{}/{}'.format(compiler, option_type)] = result  # assign the reference
@@ -127,7 +131,6 @@ def serve_request(request_id, db):
 
             # compile
             logging.info('compile with %s for %s', compiler, option_type)
-            options = ['-std=c++14', '-Wall', '-g3', '-fsanitize=undefined', '-D_GLIBCXX_DEBUG']
             exit_code, stderr, binary = run_compiler(compiler, options, code)
             result['compiler_exit_code'] = exit_code
             result['compiler_stderr'] = stderr.decode()
@@ -145,14 +148,37 @@ def serve_request(request_id, db):
                     'stderr': stderr.decode(),
                 }]
 
+    # summarize
+    highlights = []
+    checkboxes = []
+    for compiler in compilers:
+        for option_type, options in option_types.items():
+            result = results['{}/{}'.format(compiler, option_type)]
+            if result['compiler_exit_code']:
+                continue
+            for line in result['compiler_stderr'].splitlines():
+                m = re.match(r'main\.cpp:(\d+):(\d+)', line)
+                if m:
+                    highlights += [{'level': 'warning', 'lineno': int(m.group(1))}]
+            for result in result.get('sample_results'):
+                for line in result['stderr'].splitlines():
+                    m = re.match(r'main\.cpp:(\d+):(\d+)[: ]', line)
+                    if m:
+                        highlights += [{'level': 'error', 'lineno': int(m.group(1))}]
+                        checkboxes += [line]
+    highlights = list(map(dict, sorted(set(map(lambda x: tuple(sorted(x.items())), highlights)))))
+    checkboxes = sorted(set(checkboxes))
+
     # write result
     data = {
         'version': 1,
         'id': request_id,
         'results': results,
+        'highlights': highlights,
+        'checkboxes': checkboxes,
     }
-    cur.execute('INSERT INTO results (id, data) VALUES (%s, %s)', (request_id, json.dumps(data)))
-    cur.execute('DELETE FROM jobs WHERE id = %s', (request_id, ))
+    cur.execute('INSERT INTO results (request_id, data) VALUES (%s, %s)', (request_id, json.dumps(data)))
+    cur.execute('DELETE FROM jobs WHERE request_id = %s', (request_id, ))
     logging.info('done')
 
 def main():
@@ -174,7 +200,13 @@ def main():
 
         request_id = undertake_request(db=db)
         if request_id is not None:
-            data = serve_request(request_id, db=db)
+            try:
+                data = serve_request(request_id, db=db)
+            except:
+                cur = db.cursor()
+                cur.execute('UPDATE jobs SET assigned_to = NULL WHERE request_id = %s', (request_id, ))
+                logging.info('cancel request %d', request_id)
+                raise
 
 if __name__ == '__main__':
     main()

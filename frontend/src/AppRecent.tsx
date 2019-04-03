@@ -18,18 +18,20 @@ class AppRecent extends React.Component<{}, { data: any[] }> {
   public render() {
     return (
       <table className="App-recent">
-        {
-          this.state.data.map((item: any) => {
-            return (
-              <tr key={ item.id }>
-                <td>{ item.name }</td>
-                <td>{ item.user }</td>
-                <td>{ item.status }</td>
-                <td><Link to={ "/result/" + item.id }>details</Link></td>
-              </tr>
-            );
-          })
-        }
+        <tbody>
+          {
+            this.state.data.map((item: any) => {
+              return (
+                <tr key={ item.id }>
+                  <td>{ item.name }</td>
+                  <td>{ item.user }</td>
+                  <td>{ item.status }</td>
+                  <td><Link to={ "/result/" + item.id }>details</Link></td>
+                </tr>
+              );
+            })
+          }
+        </tbody>
       </table>
     );
   }

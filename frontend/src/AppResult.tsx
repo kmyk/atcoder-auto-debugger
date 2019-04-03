@@ -23,17 +23,19 @@ class AppResult extends React.Component<{ match: any }, { id: number, result: an
       return response.json();
     }).then((json) => {
       this.setState({ result: json });
-      if (! json.message) {
-        this.state.editor.markText({line:1, ch: 1}, {line: 3, ch: 3}, {
-          className: "CodeMirror-mark-highlight",
-        });
+      if (json.data) {
+        for (const highlight of json.data.highlights) {
+          this.state.editor.markText({line: highlight.lineno - 1, ch: 0}, {line: highlight.lineno - 1, ch: 9999}, {
+            className: "CodeMirror-mark-" + highlight.level,
+          });
+        }
       }
     });
   }
 
   public render() {
     (console as any).log(this.state.result);
-    if (this.state.result && this.state.result.message) {
+    if (this.state.result && ! this.state.result.data) {
       return (
         <div className="App-result">
           {this.state.result.message}
@@ -57,7 +59,17 @@ class AppResult extends React.Component<{ match: any }, { id: number, result: an
           <img src={logo} className="App-logo" alt="logo" />
           <h1 className="App-title">Auto Debugger</h1>
         </header>
+        <h2>Source Code</h2>
         <CodeMirror value={ this.state.result && this.state.result.code } options={options} editorDidMount={handleDidMount} />
+        <h2>Analyzed Result</h2>
+        <ul>
+          {
+            this.state.result && this.state.result.data.checkboxes.map((message: string) => {
+              return <li key={message}><label><input type="checkbox" />{message}</label></li>;
+            })
+          }
+        </ul>
+        <h2>Submission Info</h2>
         <table>
           <tbody>
             <tr><td>Source URL</td><td><a href={ this.state.result && this.state.result.url }>{ this.state.result && this.state.result.url }</a></td></tr>
@@ -72,7 +84,7 @@ class AppResult extends React.Component<{ match: any }, { id: number, result: an
             const value = this.state.result.data.results[key];
             return (
               <div key={key}>
-                <h2>{key}</h2>
+                <h2><code><pre>$ {value.compiler} {value.options} main.cpp</pre></code></h2>
                 <h3>Compile Error</h3>
                 { value.compiler_stderr ? <CodeMirror value={value.compiler_stderr} options={options} /> : null }
                 <h3>Test Cases</h3>

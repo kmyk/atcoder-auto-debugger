@@ -27,6 +27,9 @@
   to { transform: rotate(360deg); }
 }
 
-.CodeMirror-mark-highlight {
-  background: linear-gradient(transparent 70%, #ff99ab 70%);
+.CodeMirror-mark-error {
+  background: linear-gradient(transparent 70%, #ff9999 70%);
+}
+.CodeMirror-mark-warning {
+  background: linear-gradient(transparent 70%, #cccc99 70%);
 }

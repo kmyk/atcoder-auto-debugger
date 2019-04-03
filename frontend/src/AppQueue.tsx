@@ -17,18 +17,20 @@ class AppQueue extends React.Component<{}, { data: any[] }> {
   public render() {
     return (
       <table className="App-queue">
-        {
-          this.state.data.map((item: any) => {
-            return (
-              <tr key={ item.id }>
-                <td>{ item.name }</td>
-                <td>{ item.user }</td>
-                <td>{ item.status }</td>
-                <td><a href="{ config.base }">details</a></td>
-              </tr>
-            );
-          })
-        }
+        <tbody>
+          {
+            this.state.data.map((item: any) => {
+              return (
+                <tr key={ item.id }>
+                  <td>{ item.name }</td>
+                  <td>{ item.user }</td>
+                  <td>{ item.status }</td>
+                  <td><a href={ "/result/" + item.id }>details</a></td>
+                </tr>
+              );
+            })
+          }
+        </tbody>
       </table>
     );
   }

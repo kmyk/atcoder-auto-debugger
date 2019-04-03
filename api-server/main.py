@@ -58,9 +58,9 @@ def post_analyze():
 
     # check whether duplicated or not
     cur.execute('''
-        SELECT requests.id
+        SELECT request_id
             FROM submissions
-            INNER JOIN requests ON submissions.id = requests.submission_id
+            INNER JOIN requests USING (submission_id)
         WHERE submissions.url = %s
     ''', (submission.get_url(), ))
     row = cur.fetchone()
@@ -70,7 +70,7 @@ def post_analyze():
 
     # get problem_id 
     problem = submission.get_problem()
-    cur.execute('SELECT id FROM problems WHERE url = %s', (problem.get_url(), ))
+    cur.execute('SELECT problem_id FROM problems WHERE url = %s', (problem.get_url(), ))
     row = cur.fetchone()
     if row is not None:
         problem_id, = row
@@ -88,7 +88,7 @@ def post_analyze():
 
     # get submission_id 
     url = submission.get_url()
-    cur.execute('SELECT id FROM submissions WHERE url = %s', (submission.get_url(), ))
+    cur.execute('SELECT submission_id FROM submissions WHERE url = %s', (submission.get_url(), ))
     row = cur.fetchone()
     if row is not None:
         submission_id, = row
@@ -110,7 +110,7 @@ def post_analyze():
     cur.execute('INSERT INTO requests (submission_id) VALUES (%s)', (submission_id, ))
     cur.execute('SELECT LAST_INSERT_ID()')
     request_id, = cur.fetchone()
-    cur.execute('INSERT INTO jobs (id, ip_address) VALUES (%s, INET6_ATON(%s))', (request_id, flask.request.remote_addr))
+    cur.execute('INSERT INTO jobs (request_id, ip_address) VALUES (%s, INET6_ATON(%s))', (request_id, flask.request.remote_addr))
     db.commit()
 
     return flask.jsonify(message='OK', id=request_id)
@@ -121,15 +121,15 @@ def get_result(request_id: int):
     cur.execute('''
         SELECT results.data, problems.name, submissions.user, submissions.status, submissions.url, submissions.code, submissions.language, results.created_at
             FROM results
-            INNER JOIN requests ON results.id = requests.id
-            INNER JOIN submissions ON requests.submission_id = submissions.id
-            INNER JOIN problems ON submissions.problem_id = problems.id
-        WHERE results.id = %s
+            INNER JOIN requests USING (request_id)
+            INNER JOIN submissions USING (submission_id)
+            INNER JOIN problems USING (problem_id)
+        WHERE request_id = %s
     ''', (request_id, ))
     row = cur.fetchone()
 
     if row is None:
-        cur.execute('SELECT 1 FROM jobs WHERE id = %s', (request_id, ))
+        cur.execute('SELECT 1 FROM jobs WHERE request_id = %s', (request_id, ))
         if cur.fetchone() is not None:
             return flask.abort(flask.make_response(flask.jsonify(message="Please wait...", id=request_id), 400))
         else:
@@ -142,11 +142,11 @@ def get_result(request_id: int):
 def get_queue():
     cur = get_db().cursor(dictionary=True)
     cur.execute('''
-        SELECT requests.id, problems.name, submissions.user, submissions.status, requests.created_at, jobs.assigned_to
+        SELECT request_id as id, problems.name, submissions.user, submissions.status, requests.created_at, jobs.assigned_to
             FROM jobs
-            INNER JOIN requests ON jobs.id = requests.id
-            INNER JOIN submissions ON requests.submission_id = submissions.id
-            INNER JOIN problems ON submissions.problem_id = problems.id
+            INNER JOIN requests USING (request_id)
+            INNER JOIN submissions USING (submission_id)
+            INNER JOIN problems USING (problem_id)
     ''')
     return flask.jsonify(cur.fetchall())
 
@@ -154,11 +154,11 @@ def get_queue():
 def get_results():
     cur = get_db().cursor(dictionary=True)
     cur.execute('''
-        SELECT requests.id, problems.name, submissions.user, submissions.status, results.created_at
+        SELECT request_id as id, problems.name, submissions.user, submissions.status, results.created_at
             FROM results
-            INNER JOIN requests ON results.id = requests.id
-            INNER JOIN submissions ON requests.submission_id = submissions.id
-            INNER JOIN problems ON submissions.problem_id = problems.id
+            INNER JOIN requests USING (request_id)
+            INNER JOIN submissions USING (submission_id)
+            INNER JOIN problems USING (problem_id)
         ORDER BY results.created_at DESC
         LIMIT 10
     ''')
