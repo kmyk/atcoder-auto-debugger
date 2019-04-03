@@ -1,13 +1,12 @@
 import * as React from 'react';
 import {UnControlled as CodeMirror} from 'react-codemirror2';
 import './App.css';
+import AppHeader from './AppHeader';
 import config from './config';
 
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/mode/clike/clike';
 import 'codemirror/theme/material.css';
-
-import logo from './logo.svg';
 
 class AppResult extends React.Component<{ match: any }, { id: number, result: any, editor: any }> {
   constructor(props: { match: any }) {
@@ -18,19 +17,7 @@ class AppResult extends React.Component<{ match: any }, { id: number, result: an
       id: parseInt(props.match.params.id, 10),
       result: null,
     };
-
-    fetch(config.api + "result/" + this.state.id).then((response) => {
-      return response.json();
-    }).then((json) => {
-      this.setState({ result: json });
-      if (json.data) {
-        for (const highlight of json.data.highlights) {
-          this.state.editor.markText({line: highlight.lineno - 1, ch: 0}, {line: highlight.lineno - 1, ch: 9999}, {
-            className: "CodeMirror-mark-" + highlight.level,
-          });
-        }
-      }
-    });
+    this.fetchResult();
   }
 
   public render() {
@@ -55,10 +42,8 @@ class AppResult extends React.Component<{ match: any }, { id: number, result: an
 
     return (
       <div className="App-result">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <h1 className="App-title">Auto Debugger</h1>
-        </header>
+        <AppHeader />
+
         <h2>Source Code</h2>
         <CodeMirror value={ this.state.result && this.state.result.code } options={options} editorDidMount={handleDidMount} />
         <h2>Analyzed Result</h2>
@@ -69,6 +54,7 @@ class AppResult extends React.Component<{ match: any }, { id: number, result: an
             })
           }
         </ul>
+
         <h2>Submission Info</h2>
         <table>
           <tbody>
@@ -79,6 +65,7 @@ class AppResult extends React.Component<{ match: any }, { id: number, result: an
             <tr><td>Status</td><td>{ this.state.result && this.state.result.status }</td></tr>
           </tbody>
         </table>
+
         {
           this.state.result && Object.keys(this.state.result.data.results).map((key: string) => {
             const value = this.state.result.data.results[key];
@@ -112,6 +99,25 @@ class AppResult extends React.Component<{ match: any }, { id: number, result: an
         }
       </div>
     );
+  }
+
+  private fetchResult() {
+    fetch(config.api + "result/" + this.state.id).then((response) => {
+      return response.json();
+    }).then((json) => {
+      this.setState({ result: json });
+      if (json.data) {
+        for (const highlight of json.data.highlights) {
+          this.state.editor.markText({line: highlight.lineno - 1, ch: 0}, {line: highlight.lineno - 1, ch: 9999}, {
+            className: "CodeMirror-mark-" + highlight.level,
+          });
+        }
+      } else {
+        setTimeout(() => {
+          this.fetchResult();
+        }, 3000);
+      }
+    });
   }
 }
 

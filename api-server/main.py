@@ -147,6 +147,7 @@ def get_queue():
             INNER JOIN requests USING (request_id)
             INNER JOIN submissions USING (submission_id)
             INNER JOIN problems USING (problem_id)
+        ORDER BY requests.created_at DESC
     ''')
     return flask.jsonify(cur.fetchall())
 
