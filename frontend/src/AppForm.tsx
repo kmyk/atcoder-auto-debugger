@@ -28,7 +28,7 @@ class AppForm extends React.Component<{ history: any }, { message: string, url: 
   private handleClick() {
     const params = new URLSearchParams();
     params.append("url", this.state.url.current.value);
-    fetch(config.api + "analyze", {
+    fetch(config.api + "/analyze", {
         body: params,
         method: "POST",
     }).then((response) => {

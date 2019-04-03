@@ -16,14 +16,10 @@ flask_cors.CORS(app)
 def get_db():
     if 'db' not in flask.g:
         flask.g.db = mysql.connector.connect(
-            host=config.MYSQL_HOST,
-            port=config.MYSQL_PORT,
-            user=config.MYSQL_USER,
-            password=config.MYSQL_PASSWORD,
-            database=config.MYSQL_DATABASE,
             charset='utf8mb4',
             sql_mode='TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY',  # kamipo TRADITIONAL
             autocommit=True,
+            **config.MYSQL,
         )
     return flask.g.db
 

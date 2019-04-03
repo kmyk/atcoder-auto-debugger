@@ -11,13 +11,13 @@ class AppIndex extends React.Component<{ history: any }, { queue: any[], recent:
     super(props);
     this.state = { queue: [], recent: [] };
 
-    fetch(config.api + "queue").then((response) => {
+    fetch(config.api + "/queue").then((response) => {
       return response.json();
     }).then((json) => {
       this.setState({ queue: json });
     });
 
-    fetch(config.api + "recent").then((response) => {
+    fetch(config.api + "/recent").then((response) => {
       return response.json();
     }).then((json) => {
       this.setState({ recent: json });

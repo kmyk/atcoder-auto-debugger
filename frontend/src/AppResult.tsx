@@ -105,7 +105,7 @@ class AppResult extends React.Component<{ history: any, match: any }, { id: numb
   }
 
   private fetchResult() {
-    fetch(config.api + "result/" + this.state.id).then((response) => {
+    fetch(config.api + "/result/" + this.state.id).then((response) => {
       return response.json();
     }).then((json) => {
       this.setState({ result: json });
