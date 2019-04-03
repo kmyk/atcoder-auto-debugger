@@ -9,7 +9,7 @@ import registerServiceWorker from './registerServiceWorker';
 ReactDOM.render(
   (
     <BrowserRouter>
-      <div>
+      <div className="App">
         <Route exact={true} path='/' component={AppIndex} />
         <Route path='/result/:id' component={AppResult} />
       </div>

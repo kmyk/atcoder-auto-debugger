@@ -4,6 +4,7 @@ import './App.css';
 import AppForm from './AppForm';
 import AppHeader from './AppHeader';
 import config from './config';
+import JudgeStatus from './JudgeStatus';
 
 class AppIndex extends React.Component<{ history: any }, { queue: any[], recent: any[] }> {
   constructor(props: { history: any }) {
@@ -40,7 +41,7 @@ class AppIndex extends React.Component<{ history: any }, { queue: any[], recent:
                   <tr key={ item.id }>
                     <td>{ item.name }</td>
                     <td>{ item.user }</td>
-                    <td>{ item.status }</td>
+                    <td><JudgeStatus status={ item.status } /></td>
                     <td>details</td>
                   </tr>
                 );
@@ -58,7 +59,7 @@ class AppIndex extends React.Component<{ history: any }, { queue: any[], recent:
                   <tr key={ item.id }>
                     <td>{ item.name }</td>
                     <td>{ item.user }</td>
-                    <td>{ item.status }</td>
+                    <td><JudgeStatus status={ item.status } /></td>
                     <td><Link to={ "/result/" + item.id }>details</Link></td>
                   </tr>
                 );

@@ -1,5 +1,4 @@
 .App {
-  text-align: center;
 }
 
 .App-logo {
@@ -16,10 +15,47 @@
 
 .App-title {
   font-size: 1.5em;
+  text-decoration: none;
+  color: white;
 }
 
 .App-intro {
   font-size: large;
+}
+
+.App-form {
+  margin-left: 1em;
+}
+
+.App-submission-info {
+  border: solid 1px #eee;
+  margin-left: 1em;
+  padding: 1em;
+}
+
+.App-queue {
+  border: solid 1px #eee;
+  margin-left: 1em;
+  padding: 1em;
+}
+
+.App-recent {
+  border: solid 1px #eee;
+  margin-left: 1em;
+  padding: 1em;
+}
+
+.App-test-cases {
+  width: 100%;
+}
+.App-test-cases td:nth-child(1) {
+  width: 10%;
+}
+.App-test-cases td:nth-child(2) {
+  width: 20%;
+}
+.App-test-cases td:nth-child(3) {
+  width: 70%;
 }
 
 @keyframes App-logo-spin {
@@ -32,4 +68,12 @@
 }
 .CodeMirror-mark-warning {
   background: linear-gradient(transparent 70%, #cccc99 70%);
+}
+
+.JudgeStatus-failure {
+  background-color: orange;
+  color: white;
+  font-size: 0.8em;
+  padding: 2px 6px;
+  border-radius: 4px;
 }

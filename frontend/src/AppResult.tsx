@@ -3,13 +3,14 @@ import {UnControlled as CodeMirror} from 'react-codemirror2';
 import './App.css';
 import AppHeader from './AppHeader';
 import config from './config';
+import JudgeStatus from './JudgeStatus';
 
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/mode/clike/clike';
 import 'codemirror/theme/material.css';
 
-class AppResult extends React.Component<{ match: any }, { id: number, result: any, editor: any }> {
-  constructor(props: { match: any }) {
+class AppResult extends React.Component<{ history: any, match: any }, { id: number, result: any, editor: any }> {
+  constructor(props: { history: any, match: any }) {
     super(props);
 
     this.state = {
@@ -49,20 +50,20 @@ class AppResult extends React.Component<{ match: any }, { id: number, result: an
         <h2>Analyzed Result</h2>
         <ul>
           {
-            this.state.result && this.state.result.data.checkboxes.map((message: string) => {
-              return <li key={message}><label><input type="checkbox" />{message}</label></li>;
-            })
+            this.state.result && this.state.result.data.checkboxes.length ? this.state.result.data.checkboxes.map((message: string) => {
+              return <li key={message}><code>{message}</code></li>;
+            }) : "no results found"
           }
         </ul>
 
         <h2>Submission Info</h2>
-        <table>
+        <table className="App-submission-info">
           <tbody>
             <tr><td>Source URL</td><td><a href={ this.state.result && this.state.result.url }>{ this.state.result && this.state.result.url }</a></td></tr>
             <tr><td>Task</td><td>{ this.state.result && this.state.result.name }</td></tr>
             <tr><td>User</td><td>{ this.state.result && this.state.result.user }</td></tr>
             <tr><td>Language</td><td>{ this.state.result && this.state.result.language }</td></tr>
-            <tr><td>Status</td><td>{ this.state.result && this.state.result.status }</td></tr>
+            <tr><td>Status</td><td><JudgeStatus status={ this.state.result && this.state.result.status } /></td></tr>
           </tbody>
         </table>
 
@@ -71,11 +72,13 @@ class AppResult extends React.Component<{ match: any }, { id: number, result: an
             const value = this.state.result.data.results[key];
             return (
               <div key={key}>
-                <h2><code><pre>$ {value.compiler} {value.options} main.cpp</pre></code></h2>
+                <h2><code>$ {value.compiler} {value.options.join(" ")} main.cpp</code></h2>
+
                 <h3>Compile Error</h3>
                 { value.compiler_stderr ? <CodeMirror value={value.compiler_stderr} options={options} /> : null }
+
                 <h3>Test Cases</h3>
-                <table>
+                <table className="App-test-cases">
                   <thead>
                     <tr><th>name</th><th>standard output</th><th>standard error</th></tr>
                   </thead>
@@ -108,9 +111,9 @@ class AppResult extends React.Component<{ match: any }, { id: number, result: an
       this.setState({ result: json });
       if (json.data) {
         for (const highlight of json.data.highlights) {
-          this.state.editor.markText({line: highlight.lineno - 1, ch: 0}, {line: highlight.lineno - 1, ch: 9999}, {
-            className: "CodeMirror-mark-" + highlight.level,
-          });
+          const className = "CodeMirror-mark-" + highlight.level;
+          this.state.editor.markText({line: highlight.lineno - 1, ch: 0}, {line: highlight.lineno - 1, ch: 9999}, { className });
+          this.state.editor.addLineClass(highlight.lineno - 1, "gutter", className);
         }
       } else {
         setTimeout(() => {

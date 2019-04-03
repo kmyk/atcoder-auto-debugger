@@ -35,7 +35,7 @@ class AppForm extends React.Component<{ history: any }, { message: string, url: 
       return response.json();
     }).then((json) => {
       if (json.id) {
-        this.props.history.push("/result/" + json.id)
+        this.props.history.push("/result/" + json.id);
       } else {
         this.setState({ message: json.message });
       }
